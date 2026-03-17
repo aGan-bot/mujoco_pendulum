@@ -3,6 +3,8 @@ project(mujoco_pendulum)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(hardware_interface REQUIRED)
 
@@ -33,6 +35,17 @@ target_link_libraries(
   /opt/ros/humble/opt/mujoco_vendor/lib/libmujoco.so
 )
 
+add_executable(computed_torque_node
+  src/computed_torque_node.cpp
+)
+
+ament_target_dependencies(
+  computed_torque_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+)
+
 # RPATH ayarı (plugin runtime için)
 set_target_properties(mujoco_pendulum_system PROPERTIES
   BUILD_RPATH "$ORIGIN/../lib"
@@ -55,6 +68,11 @@ install(
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
+)
+
+install(
+  TARGETS computed_torque_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(

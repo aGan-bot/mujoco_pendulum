@@ -85,7 +85,7 @@ return_type MujocoSystem::write(
   const rclcpp::Duration &)
 {
 
-  data_->ctrl[0] = cmd_effort_ * 5.0;
+  data_->ctrl[0] = cmd_effort_;
 
   return return_type::OK;
 }

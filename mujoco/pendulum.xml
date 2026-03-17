@@ -11,6 +11,9 @@
         <joint name="hinge" type="hinge" axis="0 1 0"/>
 
         <geom type="capsule" fromto="0 0 0 0 0 -1" size="0.02"/>
+        <body name="tip_mass" pos="0 0 -1">
+          <geom type="sphere" size="0.06" mass="0.7" rgba="0.9 0.2 0.2 1"/>
+        </body>
 
       </body>
 
@@ -21,7 +24,7 @@
   <option timestep="0.01"/>
   
   <actuator>
-    <motor joint="hinge" ctrlrange="-10 10"/>
+    <motor joint="hinge" ctrlrange="-20 20"/>
   </actuator>
 
 </mujoco>
