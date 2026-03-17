@@ -27,17 +27,17 @@ public:
     qd_ref_ = declare_parameter<double>("qd_ref", 0.0);
     qdd_ref_ = declare_parameter<double>("qdd_ref", 0.0);
 
-    kp_ = declare_parameter<double>("kp", 30.0);
-    kd_ = declare_parameter<double>("kd", 4.0);
-    ki_ = declare_parameter<double>("ki", 0.0);
+    kp_ = declare_parameter<double>("kp", 34.0);
+    kd_ = declare_parameter<double>("kd", 12.0);
+    ki_ = declare_parameter<double>("ki", 0.35);
     i_clamp_ = declare_parameter<double>("i_clamp", 2.0);
 
     inertia_ = declare_parameter<double>("inertia", 1.0);
     damping_ = declare_parameter<double>("damping", 0.05);
-    mass_ = declare_parameter<double>("mass", 1.0);
-    com_length_ = declare_parameter<double>("com_length", 0.5);
+    mass_ = declare_parameter<double>("mass", 1.7);
+    com_length_ = declare_parameter<double>("com_length", 0.706);
     gravity_ = declare_parameter<double>("gravity", 9.81);
-    max_torque_ = declare_parameter<double>("max_torque", 10.0);
+    max_torque_ = declare_parameter<double>("max_torque", 20.0);
     disturbance_tau_ = declare_parameter<double>("disturbance_tau", 0.0);
 
     use_gravity_ = declare_parameter<bool>("use_gravity_comp", true);
