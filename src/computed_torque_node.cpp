@@ -80,8 +80,28 @@ private:
         kd_ = p.as_double();
       } else if (name == "ki") {
         ki_ = p.as_double();
+      } else if (name == "i_clamp") {
+        i_clamp_ = p.as_double();
+      } else if (name == "max_torque") {
+        max_torque_ = p.as_double();
+      } else if (name == "mass") {
+        mass_ = p.as_double();
+      } else if (name == "com_length") {
+        com_length_ = p.as_double();
+      } else if (name == "gravity") {
+        gravity_ = p.as_double();
+      } else if (name == "inertia") {
+        inertia_ = p.as_double();
+      } else if (name == "damping") {
+        damping_ = p.as_double();
       } else if (name == "disturbance_tau") {
         disturbance_tau_ = p.as_double();
+      } else if (name == "use_gravity_comp") {
+        use_gravity_ = p.as_bool();
+      } else if (name == "use_inertia_comp") {
+        use_inertia_ = p.as_bool();
+      } else if (name == "use_damping_comp") {
+        use_damping_ = p.as_bool();
       }
     }
 
@@ -126,11 +146,8 @@ private:
     const double dt = std::max(1e-4, (now_time - last_control_time_).seconds());
     last_control_time_ = now_time;
 
-    const double e = q_ref_ - q_;
+    const double e = std::atan2(std::sin(q_ref_ - q_), std::cos(q_ref_ - q_));
     const double edot = qd_ref_ - qd_;
-
-    integral_error_ += e * dt;
-    integral_error_ = std::clamp(integral_error_, -i_clamp_, i_clamp_);
 
     double tau_ff = 0.0;
     if (use_inertia_) {
@@ -141,6 +158,15 @@ private:
     }
     if (use_gravity_) {
       tau_ff += mass_ * gravity_ * com_length_ * std::sin(q_);
+    }
+
+    const double integral_candidate = std::clamp(integral_error_ + e * dt, -i_clamp_, i_clamp_);
+    const double tau_candidate =
+      tau_ff + kp_ * e + kd_ * edot + ki_ * integral_candidate - disturbance_tau_;
+    const bool windup_positive = (tau_candidate > max_torque_) && (e > 0.0);
+    const bool windup_negative = (tau_candidate < -max_torque_) && (e < 0.0);
+    if (!(windup_positive || windup_negative)) {
+      integral_error_ = integral_candidate;
     }
 
     const double tau_fb = kp_ * e + kd_ * edot + ki_ * integral_error_;

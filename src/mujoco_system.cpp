@@ -66,12 +66,9 @@ return_type MujocoSystem::read(
   const rclcpp::Time &,
   const rclcpp::Duration &)
 {
-
-  mj_step(model_, data_);
-
   position_ = data_->qpos[0];
   velocity_ = data_->qvel[0];
-  effort_ = data_->ctrl[0];
+  effort_ = data_->qfrc_actuator[0];
 
   // std::cout << "[read] cmd_effort_: " << cmd_effort_ 
   //           << ", pos: " << position_ 
@@ -86,6 +83,7 @@ return_type MujocoSystem::write(
 {
 
   data_->ctrl[0] = cmd_effort_;
+  mj_step(model_, data_);
 
   return return_type::OK;
 }

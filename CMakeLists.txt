@@ -39,8 +39,19 @@ add_executable(computed_torque_node
   src/computed_torque_node.cpp
 )
 
+add_executable(effort_test_node
+  src/effort_test_node.cpp
+)
+
 ament_target_dependencies(
   computed_torque_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+)
+
+ament_target_dependencies(
+  effort_test_node
   rclcpp
   sensor_msgs
   std_msgs
@@ -72,6 +83,11 @@ install(
 
 install(
   TARGETS computed_torque_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS effort_test_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
