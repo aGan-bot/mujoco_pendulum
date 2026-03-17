@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>mujoco_pendulum</name>
+  <version>0.1.0</version>
+  <description>Mujoco Pendulum hardware plugin for ROS 2 Humble</description>
+  <maintainer email="as@example.com">as</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- Zorunlu bağımlılıklar -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>rclcpp</build_depend>
+  <build_depend>pluginlib</build_depend>
+  <build_depend>hardware_interface</build_depend>
+
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>pluginlib</exec_depend>
+  <exec_depend>hardware_interface</exec_depend>
+
+  <!-- Opsiyonel test ve doc bağımlılıkları -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <hardware_interface plugin="${prefix}/mujoco_pendulum_plugin.xml"/>
+  </export>
+</package>
