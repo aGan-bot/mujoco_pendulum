@@ -198,17 +198,17 @@ private:
   double qd_ref_{0.0};
   double qdd_ref_{0.0};
 
-  double kp_{30.0};
-  double kd_{4.0};
-  double ki_{0.0};
+  double kp_{34.0};
+  double kd_{12.0};
+  double ki_{0.35};
   double i_clamp_{2.0};
 
   double inertia_{1.0};
   double damping_{0.05};
-  double mass_{1.0};
-  double com_length_{0.5};
+  double mass_{1.7};
+  double com_length_{0.706};
   double gravity_{9.81};
-  double max_torque_{10.0};
+  double max_torque_{20.0};
   double disturbance_tau_{0.0};
 
   bool use_gravity_{true};
