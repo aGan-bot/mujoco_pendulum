@@ -1,0 +1,58 @@
+<mujoco model="orion5">
+  <compiler angle="radian" autolimits="true" inertiafromgeom="false"/>
+  <option gravity="0 0 -9.81" timestep="0.002" integrator="RK4"/>
+
+  <worldbody>
+    <body name="base_link" pos="0 0 0">
+      <inertial pos="0.00000 0.00169 0.02699" mass="0.43234"
+        fullinertia="0.00108 0.00063 0.00144 0.00002 0.00000 -0.00004"/>
+
+      <body name="link_1" pos="0 0 0" euler="0 0 0">
+        <joint name="joint_1" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+        <inertial pos="-0.00001 -0.00518 0.12742" mass="1.49770"
+          fullinertia="0.00534 0.00429 0.00403 0.00007 -0.00005 0.00042"/>
+
+        <body name="link_2" pos="0 0 0.12200" euler="1.57080 0 0">
+          <joint name="joint_2" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+          <inertial pos="0.00000 0.17648 0.14370" mass="3.95670"
+            fullinertia="0.10620 0.10302 0.00923 0.00007 0.00010 -0.00106"/>
+
+          <body name="link_3" pos="0 0.42100 0" euler="0 0 -1.57080">
+            <joint name="joint_3" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+            <inertial pos="-0.20718 0.00000 0.02333" mass="1.08680"
+              fullinertia="0.02873 0.02832 0.00131 0.00000 -0.00005 -0.00127"/>
+
+            <body name="link_4" pos="-0.42700 0 0" euler="0 0 0">
+              <joint name="joint_4" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+              <inertial pos="-0.00399 0.00000 0.11685" mass="0.50427"
+                fullinertia="0.00073 0.00066 0.00049 0.00000 0.00000 0.00001"/>
+
+              <body name="link_5" pos="0 0 0.12100" euler="1.57080 0 -1.57080">
+                <joint name="joint_5" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+                <inertial pos="0.00000 0.00467 0.10098" mass="0.23998"
+                  fullinertia="0.00045 0.00023 0.00041 -0.00000 -0.00000 -0.00001"/>
+
+                <body name="link_6" pos="0 0 0.10500" euler="-1.57080 0 0">
+                  <joint name="joint_6" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+                  <inertial pos="0.00003 -0.00024 0.08347" mass="0.23998"
+                    fullinertia="0.00024 0.00029 0.00014 0.00000 0.00001 -0.00001"/>
+
+                  <body name="tool0" pos="0 0 0.1089"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="joint_1" joint="joint_1" ctrlrange="-200 200"/>
+    <motor name="joint_2" joint="joint_2" ctrlrange="-200 200"/>
+    <motor name="joint_3" joint="joint_3" ctrlrange="-200 200"/>
+    <motor name="joint_4" joint="joint_4" ctrlrange="-200 200"/>
+    <motor name="joint_5" joint="joint_5" ctrlrange="-200 200"/>
+    <motor name="joint_6" joint="joint_6" ctrlrange="-200 200"/>
+  </actuator>
+</mujoco>

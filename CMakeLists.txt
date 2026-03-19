@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(mujoco_pendulum)
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -18,6 +19,7 @@ add_library(mujoco_pendulum_system SHARED
 ament_target_dependencies(
   mujoco_pendulum_system
   rclcpp
+  ament_index_cpp
   hardware_interface
   pluginlib
 )
@@ -43,6 +45,10 @@ add_executable(effort_test_node
   src/effort_test_node.cpp
 )
 
+add_executable(gravity_comp_relay_node
+  src/gravity_comp_relay_node.cpp
+)
+
 ament_target_dependencies(
   computed_torque_node
   rclcpp
@@ -52,6 +58,13 @@ ament_target_dependencies(
 
 ament_target_dependencies(
   effort_test_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+)
+
+ament_target_dependencies(
+  gravity_comp_relay_node
   rclcpp
   sensor_msgs
   std_msgs
@@ -88,6 +101,11 @@ install(
 
 install(
   TARGETS effort_test_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS gravity_comp_relay_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
