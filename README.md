@@ -1,129 +1,153 @@
 # mujoco_pendulum
 
-ROS 2 Humble üzerinde çalışan, MuJoCo tabanlı tek eklemli sarkaç (`hinge`) ve `ros2_control` entegrasyon paketi.
+ROS 2 Humble uzerinde MuJoCo + ros2_control entegrasyonu.
 
-Bu paket ile şunları yapabilirsiniz:
-- MuJoCo sistemini `hardware_interface` plugin olarak çalıştırmak
-- `forward_command_controller` ile effort (tork) komutu vermek
-- `computed_torque_node` ile hedef açı takibi yapmak
-- `effort_test_node` ile sabit/step tork testleri yapmak
+Bu repo iki kullanim akisini destekler:
+- `pendulum`: tek eksen test ortami (hizli kontrol denemesi)
+- `orion5`: 6 eksen robot (gravity/hold tuning)
 
-## İçerik
-- `src/mujoco_system.cpp`: MuJoCo + `SystemInterface` köprüsü
-- `src/computed_torque_node.cpp`: computed torque kontrolcü node'u
-- `src/effort_test_node.cpp`: debug/test için sabit veya step tork yayıcı
-- `mujoco/pendulum.xml`: MuJoCo modeli
-- `urdf/pendulum.urdf`: ROS tarafı robot tanımı
-- `config/controllers.yaml`: `controller_manager` ayarları
-- `launch/sim.launch.py`: temel simülasyon başlatma
-- `launch/torque_hold_test.launch.py`: sim + effort test node
+## Neler Var?
+
+- `src/mujoco_system.cpp`: MuJoCo `hardware_interface::SystemInterface` bridge
+- `src/computed_torque_node.cpp`: tek eksen computed torque node
+- `src/gravity_comp_relay_node.cpp`: 6 eksen gravity/hold relay node
+- `src/effort_test_node.cpp`: sabit/step torque test node
+- `mujoco/pendulum.xml`: tek eksen MuJoCo modeli
+- `mujoco/orion5.xml`: 6 eksen MuJoCo modeli
+- `config/controllers.yaml`: pendulum controller ayarlari
+- `config/orion5_controllers.yaml`: orion5 controller ayarlari
+- `config/tuning/*.yaml`: soft/medium/stiff tuning presetleri
+- `launch/sim.launch.py`: pendulum simulasyon
+- `launch/orion5_mujoco.launch.py`: orion5 simulasyon + ros2_control
+- `launch/orion5_gravity_comp.launch.py`: orion5 + gravity_comp_relay_node
 
 ## Gereksinimler
-- Ubuntu + ROS 2 Humble
-- MuJoCo (`mujoco_vendor` üzerinden)
-- `ros2_control`, `controller_manager`, `joint_state_broadcaster`, `forward_command_controller`
+
+### 1) Sistem
+
+- Ubuntu 22.04
+- ROS 2 Humble
+
+### 2) ROS paketleri
+
+```bash
+sudo apt update
+sudo apt install -y \
+  ros-humble-mujoco-vendor \
+  ros-humble-ros2-control \
+  ros-humble-ros2-controllers \
+  ros-humble-controller-manager \
+  ros-humble-joint-state-broadcaster \
+  ros-humble-forward-command-controller \
+  ros-humble-hardware-interface \
+  ros-humble-pluginlib \
+  ros-humble-robot-state-publisher \
+  ros-humble-rviz2 \
+  ros-humble-xacro
+```
+
+### 3) MuJoCo vendor kontrolu
+
+`mujoco_vendor` binary paketi yuklendikten sonra su dosya bulunmali:
+
+Bu pakette CMake dogrudan su dosyalari linkliyor:
+- `/opt/ros/humble/opt/mujoco_vendor/include`
+- `/opt/ros/humble/opt/mujoco_vendor/lib/libmujoco.so`
+
+Kontrol:
+
+```bash
+ls /opt/ros/humble/opt/mujoco_vendor/lib/libmujoco.so
+```
 
 ## Derleme
-Workspace kökünden çalıştırın:
 
 ```bash
-cd ~/humble_ws
+cd ~/orion_humble_ws
 source /opt/ros/humble/setup.bash
-colcon build --packages-select mujoco_pendulum --symlink-install
-source ~/humble_ws/install/setup.bash
+colcon build --symlink-install --packages-select mujoco_pendulum
+source install/setup.bash
 ```
 
-## Çalıştırma
-### 1) Temel simülasyon
+## Hizli Baslangic
+
+### A) Orion5 (onerilen)
 
 ```bash
-ros2 launch mujoco_pendulum sim.launch.py
-```
-
-Not:
-- `sim.launch.py` içinde göreli yollar `src/mujoco_pendulum/...` şeklinde kullanıldığı için komutu `~/humble_ws` kökünden çalıştırmanız önerilir.
-- Headless ortamda RViz açılmayabilir; kontrol zinciri yine çalışır.
-
-### 2) Controller durumunu kontrol
-
-```bash
-ros2 control list_controllers
-ros2 control list_hardware_interfaces
+ros2 launch mujoco_pendulum orion5_gravity_comp.launch.py
 ```
 
 Beklenen:
 - `joint_state_broadcaster` aktif
 - `effort_controller` aktif
+- `gravity_comp_relay_node` aktif
 
-### 3) Manuel tork komutu
+Kontrol:
+
+```bash
+ros2 control list_controllers
+ros2 topic hz /joint_states
+ros2 topic hz /effort_controller/commands
+```
+
+### B) Pendulum (tek eksen)
+
+```bash
+ros2 launch mujoco_pendulum sim.launch.py
+```
+
+Manuel tork testi:
 
 ```bash
 ros2 topic pub /effort_controller/commands std_msgs/msg/Float64MultiArray "{data: [10.0]}" -r 100
 ```
 
-Durum gözlemi:
+## Parametre ve Tuning
+
+`orion5_gravity_comp.launch.py` varsayilan olarak `home_hold_medium.yaml` yukler.
+
+Calisirken parametre degistirme:
 
 ```bash
-ros2 topic echo /joint_states
-ros2 topic hz /joint_states
+ros2 param set /gravity_comp_relay_node q_ref "[0.0,0.0,-1.57,0.0,-1.57,0.0]"
+ros2 param set /gravity_comp_relay_node kp "[0.0,0.0,18.0,0.0,0.0,0.0]"
+ros2 param set /gravity_comp_relay_node kd "[0.0,0.0,2.5,0.0,0.0,0.0]"
+ros2 param set /gravity_comp_relay_node gain_vector "[1.0,1.0,1.05,1.0,1.0,1.0]"
 ```
 
-## Computed Torque Kullanımı
+## SIk Karsilasilan Sorunlar (Bizim Yasadiklarimiz)
 
-```bash
-ros2 run mujoco_pendulum computed_torque_node
-```
+1. Eksen cok kucuk acida kilitleniyor (ornek ~0.055 rad)
+- Genelde joint `range` ve aci birimi karisiyor.
+- MuJoCo tarafinda `angle="radian"` kullaniyoruz.
+- Derece bekleyip radyan girilirse beklenmeyen kilitlenme olur.
 
-Önemli varsayılan parametreler:
-- `kp=34.0`
-- `kd=12.0`
-- `ki=0.35`
-- `i_clamp=2.0`
-- `mass=1.7`
-- `com_length=0.706`
-- `max_torque=20.0`
-- `control_rate_hz=500.0`
-
-Canlı parametre değişimi örnekleri:
-
-```bash
-ros2 param set /computed_torque_node q_ref 1.5
-ros2 param set /computed_torque_node disturbance_tau 2.0
-ros2 param set /computed_torque_node kp 30.0
-ros2 param set /computed_torque_node kd 10.0
-ros2 param set /computed_torque_node ki 0.5
-```
-
-## Torque Test Aracı
-Simülasyon ile birlikte test node'u açar:
-
-```bash
-ros2 launch mujoco_pendulum torque_hold_test.launch.py
-```
-
-Bu launch içinde `effort_test_node` varsayılan olarak sabit tork yayınlar ve `joint_states` bilgisini loglar.
-
-## Model Notları (`mujoco/pendulum.xml`)
-- `<compiler angle="radian" ...>` kullanılır, yani eklem `range` değerleri radyandır.
-- Eklem limiti şu an `[-pi, pi]` olarak tanımlıdır.
-- Aktüatör limiti `ctrlrange="-20 20"`.
-- Dinamikler explicit inertial ile verilir (`inertiafromgeom="false"`).
-
-## Sık Karşılaşılan Problemler
-1. `q` çok küçük bir açıda kilitleniyor:
-- MuJoCo açı birimi/range kontrol edin (`angle="radian"`).
-- `range` değerinin derece gibi yorumlanmadığından emin olun.
-
-2. Komut gidiyor ama hareket yok:
-- `/effort_controller/commands` tipi `Float64MultiArray` olmalı.
-- Aynı topic'e birden fazla publisher yazıyor olabilir, kontrol edin:
+2. Komut var ama hareket yok
+- Topic tipi `std_msgs/msg/Float64MultiArray` olmali.
+- Ayni topic'e birden fazla publisher yaziyor olabilir:
   - `ros2 topic info /effort_controller/commands -v`
 
-3. Takip çok yavaş veya son kısım sürünüyor:
-- Önce `mass` ve `com_length` model uyumunu düzeltin.
-- Sonra `kp/kd` ayarlarını yapın.
-- En sonda küçük `ki` ile kalıcı hatayı kapatın.
+3. KD artinca robot saliniyor, torklar +/- max'a vuruyor
+- D-terimi fazla agresif olabilir.
+- `kd` dusur, `d_term_limit` ve `qd_lpf_alpha` parametrelerini kullan.
+- `max_torque` saturasyona girerse salinim artar.
 
-## Geliştirme Önerisi
-- `sim.launch.py` içindeki path kullanımı `get_package_share_directory` ile paket-share tabanlı hale getirilebilir.
-- Parametrelerin YAML dosyasından yüklenmesi bakım kolaylığı sağlar.
+4. `ros2 run` import veya paket bulunamadi hatalari
+- Dogru workspace'i source ettiginden emin ol:
+  - `source /opt/ros/humble/setup.bash`
+  - `source ~/orion_humble_ws/install/setup.bash`
+
+5. RViz acilmiyor ama sistem calisiyor
+- Headless/uzak ortamda RViz acilmayabilir.
+- Controller ve topiclerden sistemi dogrula.
+
+## Model Notu
+
+`mujoco/pendulum.xml` icinde:
+- `inertiafromgeom="false"` => dinamikler geometriye gore otomatik hesaplanmaz.
+- `<inertial>` ile verilen `mass/inertia` degerleri dogrudan kullanilir.
+
+## Gelistirme Notu
+
+- `orion5_humble_description` ile URDF zinciri ve isimlerin uyumlu olmasi kritik.
+- URDF degisirse `mujoco/orion5.xml` tarafini da esle.
