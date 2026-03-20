@@ -193,6 +193,8 @@ Varsayilan kontrol formu:
   - `joint_max_speed_deg`
   - `joint_max_accel_deg`
   - `enable_ref_generator`
+- Time-sync acikken tum eklemler hareketi ayni anda bitirecek sekilde ortak sureye esitlenir:
+  - `time_sync_enabled`
 
 Varsayilan config:
 - `config/tuning/pinocchio_ff_hold_medium.yaml`
@@ -215,6 +217,7 @@ ros2 topic echo /joint_states
 - `ros2 param set /pinocchio_ff_hold_node q_ref \"[...]\"`
 - 2-3 farkli pozda tekrar et.
 - Not: `q_ref` artik hedef degerdir; node bunu limitli trajeye cevirir.
+- Not: `time_sync_enabled=true` iken limitler korunarak ortak sure (synchronized finish) kullanilir.
 
 3. Basari kriteri:
 - `|pos_error|` kalici olarak kucuk kalmali.

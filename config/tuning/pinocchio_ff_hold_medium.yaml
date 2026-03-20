@@ -4,6 +4,7 @@
     kp: [4.0, 6.0, 8.0, 1.2, 1.0, 0.25]
     kd: [0.9, 1.3, 2.0, 0.25, 0.20, 0.05]
     enable_ref_generator: true
+    time_sync_enabled: true
     joint_max_speed_deg: [45.0, 30.0, 40.0, 45.0, 45.0, 45.0]
     joint_max_accel_deg: [800.0, 800.0, 800.0, 800.0, 800.0, 800.0]
     qd_lpf_alpha: 0.20

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -36,6 +37,7 @@ public:
     kd_ = declare_parameter<std::vector<double>>("kd", {0.8, 1.2, 1.8, 0.3, 0.3, 0.2});
     qd_lpf_alpha_ = declare_parameter<double>("qd_lpf_alpha", 0.2);
     enable_ref_generator_ = declare_parameter<bool>("enable_ref_generator", true);
+    time_sync_enabled_ = declare_parameter<bool>("time_sync_enabled", true);
     joint_max_speed_deg_ = declare_parameter<std::vector<double>>(
       "joint_max_speed_deg", {45.0, 30.0, 40.0, 45.0, 45.0, 45.0});
     joint_max_accel_deg_ = declare_parameter<std::vector<double>>(
@@ -138,6 +140,8 @@ private:
         qd_lpf_alpha_ = std::clamp(p.as_double(), 0.0, 1.0);
       } else if (name == "enable_ref_generator") {
         enable_ref_generator_ = p.as_bool();
+      } else if (name == "time_sync_enabled") {
+        time_sync_enabled_ = p.as_bool();
       } else if (name == "joint_max_speed_deg") {
         joint_max_speed_deg_ = p.as_double_array();
       } else if (name == "joint_max_accel_deg") {
@@ -152,9 +156,141 @@ private:
         hold_current_on_start_ = p.as_bool();
       }
     }
+    if (std::find_if(
+          params.begin(), params.end(),
+          [](const rclcpp::Parameter & p) { return p.get_name() == "q_ref"; }) != params.end())
+    {
+      sync_profile_valid_ = false;
+      sync_time_ = 0.0;
+    }
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
     return result;
+  }
+
+  static double min_time_for_distance(double dist, double v_max, double a_max)
+  {
+    const double d = std::abs(dist);
+    if (d < 1e-12) {
+      return 0.0;
+    }
+    if (v_max <= 0.0 || a_max <= 0.0) {
+      return std::numeric_limits<double>::infinity();
+    }
+    const double t_acc = v_max / a_max;
+    const double d_acc = 0.5 * a_max * t_acc * t_acc;
+    if (d <= 2.0 * d_acc) {
+      return 2.0 * std::sqrt(d / a_max);
+    }
+    const double d_cruise = d - 2.0 * d_acc;
+    return 2.0 * t_acc + d_cruise / v_max;
+  }
+
+  void build_sync_profile()
+  {
+    sync_q_start_ = q_ref_cmd_;
+    sync_q_goal_ = q_ref_;
+    sync_time_ = 0.0;
+    sync_T_ = 0.0;
+    sync_v_peak_.assign(joint_names_.size(), 0.0);
+
+    // Common duration from per-joint minimal-time bounds.
+    for (size_t i = 0; i < joint_names_.size(); ++i) {
+      const double d = get_or_last(sync_q_goal_, i, 0.0) - get_or_last(sync_q_start_, i, 0.0);
+      const double v = deg2rad(get_or_last(joint_max_speed_deg_, i, 0.0));
+      const double a = deg2rad(get_or_last(joint_max_accel_deg_, i, 0.0));
+      sync_T_ = std::max(sync_T_, min_time_for_distance(d, v, a));
+    }
+
+    if (sync_T_ <= 1e-9 || !std::isfinite(sync_T_)) {
+      sync_profile_valid_ = false;
+      return;
+    }
+
+    // For each joint, solve v from d = v*T - v^2/a (symmetric accel/decel + optional cruise).
+    for (size_t i = 0; i < joint_names_.size(); ++i) {
+      const double d = std::abs(get_or_last(sync_q_goal_, i, 0.0) - get_or_last(sync_q_start_, i, 0.0));
+      const double v_lim = deg2rad(get_or_last(joint_max_speed_deg_, i, 0.0));
+      const double a = deg2rad(get_or_last(joint_max_accel_deg_, i, 0.0));
+      if (d < 1e-12 || v_lim <= 0.0 || a <= 0.0) {
+        sync_v_peak_[i] = 0.0;
+        continue;
+      }
+
+      const double disc = std::max(0.0, a * a * sync_T_ * sync_T_ - 4.0 * a * d);
+      double v = 0.5 * (a * sync_T_ - std::sqrt(disc));
+      v = std::clamp(v, 0.0, v_lim);
+      sync_v_peak_[i] = v;
+    }
+
+    sync_profile_valid_ = true;
+  }
+
+  void update_reference_generator_sync(double dt)
+  {
+    if (!sync_profile_valid_) {
+      build_sync_profile();
+      if (!sync_profile_valid_) {
+        return;
+      }
+    }
+
+    sync_time_ = std::min(sync_time_ + dt, sync_T_);
+
+    for (size_t i = 0; i < joint_names_.size(); ++i) {
+      const double q0 = get_or_last(sync_q_start_, i, 0.0);
+      const double q1 = get_or_last(sync_q_goal_, i, q0);
+      const double dq = q1 - q0;
+      const double sign = (dq >= 0.0) ? 1.0 : -1.0;
+      const double d = std::abs(dq);
+      const double v = get_or_last(sync_v_peak_, i, 0.0);
+      const double a = deg2rad(get_or_last(joint_max_accel_deg_, i, 0.0));
+
+      if (d < 1e-12 || v <= 0.0 || a <= 0.0) {
+        q_ref_cmd_[i] = q1;
+        q_ref_dot_cmd_[i] = 0.0;
+        continue;
+      }
+
+      const double t_r = v / a;
+      const double t_c = std::max(0.0, sync_T_ - 2.0 * t_r);
+      const double t = sync_time_;
+
+      double s = 0.0;
+      double sd = 0.0;
+
+      if (t <= t_r) {
+        // accel phase
+        s = 0.5 * a * t * t;
+        sd = a * t;
+      } else if (t <= t_r + t_c) {
+        // cruise phase
+        const double ta = t_r;
+        s = 0.5 * a * ta * ta + v * (t - ta);
+        sd = v;
+      } else if (t <= sync_T_) {
+        // decel phase
+        const double td = t - (t_r + t_c);
+        const double ta = t_r;
+        const double s_before = 0.5 * a * ta * ta + v * t_c;
+        s = s_before + v * td - 0.5 * a * td * td;
+        sd = std::max(0.0, v - a * td);
+      } else {
+        s = d;
+        sd = 0.0;
+      }
+
+      q_ref_cmd_[i] = q0 + sign * std::clamp(s, 0.0, d);
+      q_ref_dot_cmd_[i] = sign * sd;
+    }
+
+    if (sync_time_ >= sync_T_ - 1e-9) {
+      sync_profile_valid_ = false;
+      for (size_t i = 0; i < joint_names_.size(); ++i) {
+        q_ref_cmd_[i] = get_or_last(q_ref_, i, q_ref_cmd_[i]);
+        q_ref_dot_cmd_[i] = 0.0;
+      }
+    }
   }
 
   void update_reference_generator(double dt)
@@ -170,6 +306,11 @@ private:
     }
     if (q_ref_dot_cmd_.size() != joint_names_.size()) {
       q_ref_dot_cmd_.assign(joint_names_.size(), 0.0);
+    }
+
+    if (time_sync_enabled_) {
+      update_reference_generator_sync(dt);
+      return;
     }
 
     for (size_t i = 0; i < joint_names_.size(); ++i) {
@@ -308,6 +449,7 @@ private:
   std::vector<double> kd_;
   double qd_lpf_alpha_{0.2};
   bool enable_ref_generator_{true};
+  bool time_sync_enabled_{true};
   std::vector<double> joint_max_speed_deg_;
   std::vector<double> joint_max_accel_deg_;
   std::vector<double> torque_rate_limit_vector_;
@@ -327,6 +469,12 @@ private:
   Eigen::VectorXd v_;
   std::vector<double> qd_filt_;
   std::vector<double> tau_prev_;
+  std::vector<double> sync_q_start_;
+  std::vector<double> sync_q_goal_;
+  std::vector<double> sync_v_peak_;
+  double sync_time_{0.0};
+  double sync_T_{0.0};
+  bool sync_profile_valid_{false};
   bool has_state_{false};
   bool ref_initialized_{false};
   std::mutex mtx_;
