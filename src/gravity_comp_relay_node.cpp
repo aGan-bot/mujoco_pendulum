@@ -19,13 +19,15 @@ public:
   {
     gain_ = declare_parameter<double>("gain", 1.0);
     gain_vector_ = declare_parameter<std::vector<double>>("gain_vector", std::vector<double>{});
-    q_ref_ = declare_parameter<std::vector<double>>("q_ref", {0.0, 0.0, -1.5708, 0.0, -1.5708, 0.0});
+    q_ref_ = declare_parameter<std::vector<double>>("q_ref", {0.0, 0.0, -1.5708, 0.0, 1.5708, 0.0});
     kp_ = declare_parameter<std::vector<double>>("kp", {0.0, 0.0, 18.0, 0.0, 0.0, 0.0});
     kd_ = declare_parameter<std::vector<double>>("kd", {0.0, 0.0, 2.5, 0.0, 0.0, 0.0});
     qd_lpf_alpha_ = declare_parameter<double>("qd_lpf_alpha", 0.2);
     d_term_limit_ = declare_parameter<double>("d_term_limit", 30.0);
     use_shortest_angular_error_ = declare_parameter<bool>("use_shortest_angular_error", false);
     max_torque_ = declare_parameter<double>("max_torque", 200.0);
+    max_torque_vector_ = declare_parameter<std::vector<double>>(
+      "max_torque_vector", {87.0, 87.0, 52.0, 10.0, 10.0, 10.0});
     command_topic_ = declare_parameter<std::string>(
       "command_topic", "/effort_controller/commands");
     bias_topic_ = declare_parameter<std::string>("bias_topic", "/mujoco/bias_torque");
@@ -70,6 +72,16 @@ private:
     return values.back();
   }
 
+  static double get_torque_limit(
+    const std::vector<double> & limits, size_t i, double fallback)
+  {
+    const double limit = std::abs(get_or_default(limits, i, fallback));
+    if (limit > 0.0) {
+      return limit;
+    }
+    return std::abs(fallback);
+  }
+
   rcl_interfaces::msg::SetParametersResult on_parameters_set(
     const std::vector<rclcpp::Parameter> & params)
   {
@@ -93,6 +105,8 @@ private:
         use_shortest_angular_error_ = p.as_bool();
       } else if (name == "max_torque") {
         max_torque_ = p.as_double();
+      } else if (name == "max_torque_vector") {
+        max_torque_vector_ = p.as_double_array();
       }
     }
     rcl_interfaces::msg::SetParametersResult result;
@@ -139,13 +153,14 @@ private:
       const double q_ref_i = get_or_default(q_ref_, i, 0.0);
       const double kp_i = get_or_default(kp_, i, 0.0);
       const double kd_i = get_or_default(kd_, i, 0.0);
+      const double tau_limit_i = get_torque_limit(max_torque_vector_, i, max_torque_);
       double e = q_ref_i - q_[i];
       if (use_shortest_angular_error_) {
         e = std::atan2(std::sin(e), std::cos(e));
       }
       const double d_term = std::clamp(-kd_i * qd_filt_[i], -d_term_limit_, d_term_limit_);
       const double u = gi * msg->data[i] + kp_i * e + d_term;
-      cmd.data[i] = std::clamp(u, -max_torque_, max_torque_);
+      cmd.data[i] = std::clamp(u, -tau_limit_i, tau_limit_i);
     }
 
     pub_->publish(cmd);
@@ -160,6 +175,7 @@ private:
   double d_term_limit_{30.0};
   bool use_shortest_angular_error_{false};
   double max_torque_{200.0};
+  std::vector<double> max_torque_vector_;
   std::string command_topic_;
   std::string bias_topic_;
   std::string state_topic_;

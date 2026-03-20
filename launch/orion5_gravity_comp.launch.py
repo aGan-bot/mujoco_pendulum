@@ -21,16 +21,17 @@ def generate_launch_description():
             medium_tuning,
             {"gain": LaunchConfiguration("gain")},
             {"gain_vector": [1.0, 1.0, 1.05, 1.0, 1.0, 1.0]},
-            {"q_ref": [0.0, 0.0, -1.5708, 0.0, -1.5708, 0.0]},
+            {"q_ref": [0.0, 0.0, -1.5708, 0.0, 1.5708, 0.0]},
             {"kp": [0.0, 0.0, 18.0, 0.0, 0.0, 0.0]},
             {"kd": [0.0, 0.0, 2.5, 0.0, 0.0, 0.0]},
+            {"max_torque_vector": [87.0, 87.0, 52.0, 10.0, 10.0, 10.0]},
             {"max_torque": LaunchConfiguration("max_torque")},
         ],
     )
 
     return LaunchDescription([
         DeclareLaunchArgument("gain", default_value="1.0"),
-        DeclareLaunchArgument("max_torque", default_value="200.0"),
+        DeclareLaunchArgument("max_torque", default_value="87.0"),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(base_launch)),
         gravity_comp_node,
     ])

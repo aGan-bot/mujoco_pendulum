@@ -109,7 +109,7 @@ ros2 topic pub /effort_controller/commands std_msgs/msg/Float64MultiArray "{data
 Calisirken parametre degistirme:
 
 ```bash
-ros2 param set /gravity_comp_relay_node q_ref "[0.0,0.0,-1.57,0.0,-1.57,0.0]"
+ros2 param set /gravity_comp_relay_node q_ref "[0.0,0.0,-1.57,0.0,1.57,0.0]"
 ros2 param set /gravity_comp_relay_node kp "[0.0,0.0,18.0,0.0,0.0,0.0]"
 ros2 param set /gravity_comp_relay_node kd "[0.0,0.0,2.5,0.0,0.0,0.0]"
 ros2 param set /gravity_comp_relay_node gain_vector "[1.0,1.0,1.05,1.0,1.0,1.0]"

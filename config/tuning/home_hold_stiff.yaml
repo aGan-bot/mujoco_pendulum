@@ -1,11 +1,12 @@
 /gravity_comp_relay_node:
   ros__parameters:
     gain: 1.0
-    max_torque: 200.0
+    max_torque: 87.0
+    max_torque_vector: [87.0, 87.0, 52.0, 10.0, 10.0, 10.0]
     qd_lpf_alpha: 0.25
     d_term_limit: 30.0
     use_shortest_angular_error: false
     gain_vector: [1.0, 1.0, 1.08, 1.0, 1.0, 1.0]
-    q_ref: [0.0, 0.0, -1.5708, 0.0, -1.5708, 0.0]
+    q_ref: [0.0, 0.0, -1.5708, 0.0, 1.5708, 0.0]
     kp: [0.0, 0.0, 28.0, 0.0, 0.0, 0.0]
     kd: [0.0, 0.0, 4.0, 0.0, 0.0, 0.0]
