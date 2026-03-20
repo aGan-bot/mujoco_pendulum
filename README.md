@@ -184,6 +184,13 @@ Kapali-cevrim feedforward hold testi:
 ros2 launch mujoco_pendulum orion5_pinocchio_ff_hold.launch.py
 ```
 
+Profil secerek calistirma:
+
+```bash
+ros2 launch mujoco_pendulum orion5_pinocchio_ff_hold.launch.py profile:=medium
+ros2 launch mujoco_pendulum orion5_pinocchio_ff_hold.launch.py profile:=stable
+```
+
 Varsayilan kontrol formu:
 - `tau = g(q) + Kp*(q_ref - q) - Kd*qd`
 - `qd` terimi LPF ile filtrelenir (`qd_lpf_alpha`)
