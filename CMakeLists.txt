@@ -55,6 +55,10 @@ add_executable(pinocchio_gravity_node
   src/pinocchio_gravity_node.cpp
 )
 
+add_executable(pinocchio_ff_hold_node
+  src/pinocchio_ff_hold_node.cpp
+)
+
 ament_target_dependencies(
   computed_torque_node
   rclcpp
@@ -84,8 +88,21 @@ ament_target_dependencies(
   ament_index_cpp
 )
 
+ament_target_dependencies(
+  pinocchio_ff_hold_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+  ament_index_cpp
+)
+
 target_link_libraries(
   pinocchio_gravity_node
+  pinocchio::pinocchio
+)
+
+target_link_libraries(
+  pinocchio_ff_hold_node
   pinocchio::pinocchio
 )
 
@@ -130,6 +147,11 @@ install(
 
 install(
   TARGETS pinocchio_gravity_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS pinocchio_ff_hold_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

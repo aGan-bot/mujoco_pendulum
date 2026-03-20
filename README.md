@@ -12,6 +12,7 @@ Bu repo iki kullanim akisini destekler:
 - `src/computed_torque_node.cpp`: tek eksen computed torque node
 - `src/gravity_comp_relay_node.cpp`: 6 eksen gravity/hold relay node
 - `src/pinocchio_gravity_node.cpp`: Pinocchio ile `g(q)` hesaplayip MuJoCo bias ile karsilastirma node'u
+- `src/pinocchio_ff_hold_node.cpp`: Pinocchio `g(q)` + PD ile kapali-cevrim hold node'u
 - `src/effort_test_node.cpp`: sabit/step torque test node
 - `mujoco/pendulum.xml`: tek eksen MuJoCo modeli
 - `mujoco/orion5.xml`: 6 eksen MuJoCo modeli
@@ -22,6 +23,7 @@ Bu repo iki kullanim akisini destekler:
 - `launch/orion5_mujoco.launch.py`: orion5 simulasyon + ros2_control
 - `launch/orion5_gravity_comp.launch.py`: orion5 + gravity_comp_relay_node
 - `launch/orion5_pinocchio_gravity_check.launch.py`: orion5 + Pinocchio gravity feedforward dogrulama
+- `launch/orion5_pinocchio_ff_hold.launch.py`: orion5 + Pinocchio feedforward closed-loop hold
 
 ## Gereksinimler
 
@@ -173,6 +175,56 @@ Dogrulama sonucu:
 Pratik cikarim:
 - URDF'ten MJCF'e geciste `eulerseq` acik yazilmali.
 - Mümkünse uzun vadede `euler` yerine `quat` kullanimi tercih edilmeli.
+
+## Pinocchio Feedforward Closed-Loop (g(q)+PD)
+
+Kapali-cevrim feedforward hold testi:
+
+```bash
+ros2 launch mujoco_pendulum orion5_pinocchio_ff_hold.launch.py
+```
+
+Varsayilan kontrol formu:
+- `tau = g(q) + Kp*(q_ref - q) - Kd*qd`
+- `qd` terimi LPF ile filtrelenir (`qd_lpf_alpha`)
+- tork komutu eklem-bazli slew-rate limit ile yumusatilir (`torque_rate_limit_vector`)
+- ilk acilista referans mevcut poza alinabilir (`hold_current_on_start=true`)
+- `q_ref` adim komutu, eklem-bazli hiz/ivme limitli referans ureteci ile yumusatilir:
+  - `joint_max_speed_deg`
+  - `joint_max_accel_deg`
+  - `enable_ref_generator`
+
+Varsayilan config:
+- `config/tuning/pinocchio_ff_hold_medium.yaml`
+
+Canli izleme:
+
+```bash
+ros2 topic echo /pinocchio_ff/cmd_torque
+ros2 topic echo /pinocchio_ff/pos_error
+ros2 topic echo /joint_states
+```
+
+### Test Hazirligi ve Kriterler
+
+1. Home hold:
+- hedef: `q_ref = [0, 0, -1.5708, 0, 1.5708, 0]`
+- beklenti: hizlar kisa surede sifira iner, buyuk salinim olmaz.
+
+2. Poz adim testi (manuel):
+- `ros2 param set /pinocchio_ff_hold_node q_ref \"[...]\"`
+- 2-3 farkli pozda tekrar et.
+- Not: `q_ref` artik hedef degerdir; node bunu limitli trajeye cevirir.
+
+3. Basari kriteri:
+- `|pos_error|` kalici olarak kucuk kalmali.
+- `cmd_torque` rated limitlere dayanip kalmamalidir (surekli saturasyon olmamali).
+- robotun drift davranisi olmamali.
+
+4. J6 salinim gorulurse:
+- once `kd[5]` degerini kucult (ornek `0.02 - 0.08` araligi),
+- sonra `kp[5]` degerini kucult (ornek `0.1 - 0.4`),
+- gerekiyorsa `torque_rate_limit_vector[5]` degerini dusur.
 
 ## SIk Karsilasilan Sorunlar (Bizim Yasadiklarimiz)
 
