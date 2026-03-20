@@ -48,11 +48,11 @@
   </worldbody>
 
   <actuator>
-    <motor name="joint_1" joint="joint_1" ctrlrange="-200 200"/>
-    <motor name="joint_2" joint="joint_2" ctrlrange="-200 200"/>
-    <motor name="joint_3" joint="joint_3" ctrlrange="-200 200"/>
-    <motor name="joint_4" joint="joint_4" ctrlrange="-200 200"/>
-    <motor name="joint_5" joint="joint_5" ctrlrange="-200 200"/>
-    <motor name="joint_6" joint="joint_6" ctrlrange="-200 200"/>
+    <motor name="joint_1" joint="joint_1" ctrlrange="-87 87"/>
+    <motor name="joint_2" joint="joint_2" ctrlrange="-87 87"/>
+    <motor name="joint_3" joint="joint_3" ctrlrange="-52 52"/>
+    <motor name="joint_4" joint="joint_4" ctrlrange="-10 10"/>
+    <motor name="joint_5" joint="joint_5" ctrlrange="-10 10"/>
+    <motor name="joint_6" joint="joint_6" ctrlrange="-10 10"/>
   </actuator>
 </mujoco>
