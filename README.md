@@ -158,6 +158,22 @@ Beklenti:
   - `/pinocchio/rne_gravity_error`
   - Bu sinyal kucukse, farkin buyuk kismi `qfrc_bias` tanimindan gelir ve model geometri/inertia tarafi dogrudur.
 
+### Kritik Not: URDF `rpy` ve MJCF `euler` sirasi
+
+Orion5 modelinde kalici gravity farkinin ana nedeni, URDF `rpy` konvansiyonu ile MuJoCo `euler`
+konvansiyonunun farkli yorumlanmasi oldu.
+
+Bu projede fix:
+- `mujoco/orion5.xml` icinde `compiler` satirina `eulerseq=\"XYZ\"` eklendi.
+
+Dogrulama sonucu:
+- Durgun durumda `/pinocchio/rne_gravity_error` degerleri sayisal yuvarlama seviyesine indi
+  (tipik olarak `1e-6` ve alti, bazi orneklerde `1e-15` mertebesi).
+
+Pratik cikarim:
+- URDF'ten MJCF'e geciste `eulerseq` acik yazilmali.
+- Mümkünse uzun vadede `euler` yerine `quat` kullanimi tercih edilmeli.
+
 ## SIk Karsilasilan Sorunlar (Bizim Yasadiklarimiz)
 
 1. Eksen cok kucuk acida kilitleniyor (ornek ~0.055 rad)
