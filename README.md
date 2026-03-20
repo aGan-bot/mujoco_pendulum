@@ -11,6 +11,7 @@ Bu repo iki kullanim akisini destekler:
 - `src/mujoco_system.cpp`: MuJoCo `hardware_interface::SystemInterface` bridge
 - `src/computed_torque_node.cpp`: tek eksen computed torque node
 - `src/gravity_comp_relay_node.cpp`: 6 eksen gravity/hold relay node
+- `src/pinocchio_gravity_node.cpp`: Pinocchio ile `g(q)` hesaplayip MuJoCo bias ile karsilastirma node'u
 - `src/effort_test_node.cpp`: sabit/step torque test node
 - `mujoco/pendulum.xml`: tek eksen MuJoCo modeli
 - `mujoco/orion5.xml`: 6 eksen MuJoCo modeli
@@ -20,6 +21,7 @@ Bu repo iki kullanim akisini destekler:
 - `launch/sim.launch.py`: pendulum simulasyon
 - `launch/orion5_mujoco.launch.py`: orion5 simulasyon + ros2_control
 - `launch/orion5_gravity_comp.launch.py`: orion5 + gravity_comp_relay_node
+- `launch/orion5_pinocchio_gravity_check.launch.py`: orion5 + Pinocchio gravity feedforward dogrulama
 
 ## Gereksinimler
 
@@ -114,6 +116,47 @@ ros2 param set /gravity_comp_relay_node kp "[0.0,0.0,18.0,0.0,0.0,0.0]"
 ros2 param set /gravity_comp_relay_node kd "[0.0,0.0,2.5,0.0,0.0,0.0]"
 ros2 param set /gravity_comp_relay_node gain_vector "[1.0,1.0,1.05,1.0,1.0,1.0]"
 ```
+
+## Pinocchio Gravity Feedforward Dogrulama
+
+Ilk hedef icin yalnizca gravity feedforward'u dogrulamak icin:
+
+```bash
+ros2 launch mujoco_pendulum orion5_pinocchio_gravity_check.launch.py
+```
+
+Bu launch ile:
+- MuJoCo simulasyon (`orion5_mujoco`) acilir
+- `pinocchio_gravity_node` calisir
+
+Node yayinlari:
+- `/pinocchio/gravity_torque`: Pinocchio `g(q)`
+- `/pinocchio/gravity_error`: `/mujoco/bias_torque - g(q)`
+- `/pinocchio/bias_torque`: Pinocchio `rnea(q,qd,0)` (bias benzeri)
+- `/pinocchio/bias_error`: `/mujoco/bias_torque - pinocchio_bias_torque`
+- `/pinocchio/rne_gravity_error`: `/mujoco/rne_gravity_torque - g(q)`
+
+MuJoCo debug yayinlari:
+- `/mujoco/bias_torque`
+- `/mujoco/rne_gravity_torque` (MuJoCo RNE ile `qvel=0` gravity benzeri tork)
+
+Hizli kontrol:
+
+```bash
+ros2 topic echo /pinocchio/gravity_torque
+ros2 topic echo /pinocchio/gravity_error
+ros2 topic echo /pinocchio/bias_torque
+ros2 topic echo /pinocchio/bias_error
+ros2 topic echo /pinocchio/rne_gravity_error
+```
+
+Beklenti:
+- Robot durgunken hata kucuk kalmali.
+- Hata cok buyukse eklem eksen yonu, inertia veya frame uyumsuzlugu kontrol edilmelidir.
+- Robot hareketliyken `/pinocchio/bias_error` genelde `/pinocchio/gravity_error`'dan daha anlamli bir karsilastirma verir.
+- Kök neden analizi icin en guclu sinyal:
+  - `/pinocchio/rne_gravity_error`
+  - Bu sinyal kucukse, farkin buyuk kismi `qfrc_bias` tanimindan gelir ve model geometri/inertia tarafi dogrudur.
 
 ## SIk Karsilasilan Sorunlar (Bizim Yasadiklarimiz)
 

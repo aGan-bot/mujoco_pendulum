@@ -8,6 +8,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(hardware_interface REQUIRED)
+find_package(pinocchio REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # -----------------------------
 #  Kütüphane oluşturma
@@ -49,6 +51,10 @@ add_executable(gravity_comp_relay_node
   src/gravity_comp_relay_node.cpp
 )
 
+add_executable(pinocchio_gravity_node
+  src/pinocchio_gravity_node.cpp
+)
+
 ament_target_dependencies(
   computed_torque_node
   rclcpp
@@ -68,6 +74,19 @@ ament_target_dependencies(
   rclcpp
   sensor_msgs
   std_msgs
+)
+
+ament_target_dependencies(
+  pinocchio_gravity_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+  ament_index_cpp
+)
+
+target_link_libraries(
+  pinocchio_gravity_node
+  pinocchio::pinocchio
 )
 
 # RPATH ayarı (plugin runtime için)
@@ -106,6 +125,11 @@ install(
 
 install(
   TARGETS gravity_comp_relay_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS pinocchio_gravity_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

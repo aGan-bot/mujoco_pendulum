@@ -46,9 +46,11 @@ private:
   std::vector<double> effort_;
   std::vector<double> cmd_effort_;
   std::vector<double> bias_effort_;
+  std::vector<double> rne_gravity_effort_;
 
   rclcpp::Node::SharedPtr debug_node_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr bias_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr rne_gravity_pub_;
 
   mjModel * model_ = nullptr;
   mjData * data_ = nullptr;

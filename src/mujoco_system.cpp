@@ -80,6 +80,7 @@ CallbackReturn MujocoSystem::on_init(
   effort_.assign(n_joints, 0.0);
   cmd_effort_.assign(n_joints, 0.0);
   bias_effort_.assign(n_joints, 0.0);
+  rne_gravity_effort_.assign(n_joints, 0.0);
 
   for (size_t i = 0; i < n_joints; ++i) {
     const auto & joint_name = info_.joints[i].name;
@@ -113,6 +114,8 @@ CallbackReturn MujocoSystem::on_init(
   debug_node_ = std::make_shared<rclcpp::Node>(node_name.str());
   bias_pub_ = debug_node_->create_publisher<std_msgs::msg::Float64MultiArray>(
     "/mujoco/bias_torque", 10);
+  rne_gravity_pub_ = debug_node_->create_publisher<std_msgs::msg::Float64MultiArray>(
+    "/mujoco/rne_gravity_torque", 10);
 
   std::cout << "Loaded model: " << model_path << " (nq=" << model_->nq
             << ", nv=" << model_->nv << ", nu=" << model_->nu << ")" << std::endl;
@@ -174,10 +177,32 @@ return_type MujocoSystem::write(
     bias_effort_[i] = data_->qfrc_bias[dof_addrs_[i]];
   }
 
+  // Diagnostic: compute gravity-only generalized torque via MuJoCo RNE at qvel=0.
+  // This gives an apples-to-apples signal against Pinocchio g(q).
+  std::vector<mjtNum> qvel_backup(static_cast<size_t>(model_->nv), 0.0);
+  mju_copy(qvel_backup.data(), data_->qvel, model_->nv);
+  mju_zero(data_->qvel, model_->nv);
+  mj_forward(model_, data_);
+
+  std::vector<mjtNum> rne_buf(static_cast<size_t>(model_->nv), 0.0);
+  mj_rne(model_, data_, 0, rne_buf.data());
+  for (size_t i = 0; i < joint_names_.size(); ++i) {
+    rne_gravity_effort_[i] = rne_buf[static_cast<size_t>(dof_addrs_[i])];
+  }
+
+  mju_copy(data_->qvel, qvel_backup.data(), model_->nv);
+  mj_forward(model_, data_);
+
   if (bias_pub_) {
     std_msgs::msg::Float64MultiArray msg;
     msg.data = bias_effort_;
     bias_pub_->publish(msg);
+  }
+
+  if (rne_gravity_pub_) {
+    std_msgs::msg::Float64MultiArray msg;
+    msg.data = rne_gravity_effort_;
+    rne_gravity_pub_->publish(msg);
   }
 
   return return_type::OK;

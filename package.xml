@@ -14,6 +14,7 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>pluginlib</build_depend>
   <build_depend>hardware_interface</build_depend>
+  <build_depend>pinocchio</build_depend>
 
   <exec_depend>ament_index_cpp</exec_depend>
   <exec_depend>rclcpp</exec_depend>
@@ -21,6 +22,7 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>pluginlib</exec_depend>
   <exec_depend>hardware_interface</exec_depend>
+  <exec_depend>pinocchio</exec_depend>
 
   <!-- Opsiyonel test ve doc bağımlılıkları -->
   <test_depend>ament_lint_auto</test_depend>
